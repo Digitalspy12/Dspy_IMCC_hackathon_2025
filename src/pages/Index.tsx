@@ -14,48 +14,80 @@ interface Detection {
 
 const Index = () => {
   const [detections, setDetections] = useState<Detection[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleImageUpload = async (file: File) => {
-    // Simulate detection process
-    toast({
-      title: "Processing image...",
-      description: "This may take a few moments.",
-    });
+    setIsAnalyzing(true);
+    
+    // Create form data for image upload
+    const formData = new FormData();
+    formData.append('image', file);
 
-    // Mock detection results
-    setTimeout(() => {
-      const mockDetections: Detection[] = [
-        {
-          id: "1",
-          type: "Vehicle",
-          confidence: 0.95,
-          coordinates: [30.5234, 50.4501],
-        },
-        {
-          id: "2",
-          type: "Building",
-          confidence: 0.88,
-          coordinates: [30.5134, 50.4401],
-        },
-      ];
-
-      setDetections(mockDetections);
+    try {
       toast({
-        title: "Detection complete",
-        description: `Found ${mockDetections.length} objects`,
+        title: "Processing image...",
+        description: "Analyzing with YOLOv8. This may take a moment.",
       });
-    }, 2000);
+
+      // TODO: Replace with actual backend endpoint
+      // const response = await fetch('your-backend-url/analyze', {
+      //   method: 'POST',
+      //   body: formData
+      // });
+      // const data = await response.json();
+      
+      // Simulate backend response for now
+      setTimeout(() => {
+        const mockDetections: Detection[] = [
+          {
+            id: "1",
+            type: "Vehicle",
+            confidence: 0.95,
+            coordinates: [30.5234, 50.4501],
+          },
+          {
+            id: "2",
+            type: "Building",
+            confidence: 0.88,
+            coordinates: [30.5134, 50.4401],
+          },
+        ];
+
+        setDetections(mockDetections);
+        setIsAnalyzing(false);
+        
+        toast({
+          title: "Analysis complete",
+          description: `Found ${mockDetections.length} objects`,
+        });
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to analyze image. Please try again.",
+        variant: "destructive",
+      });
+      setIsAnalyzing(false);
+    }
   };
 
   return (
-    <Layout>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
-        <div className="lg:col-span-3 h-full">
-          <Map detections={detections} />
+    <Layout className="p-0">
+      <div className="relative w-full h-screen">
+        <Map detections={detections} className="w-full h-full" />
+        
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[600px] max-w-[90vw] z-[1000]">
+          <ImageUpload 
+            onUpload={handleImageUpload} 
+            className={`transition-opacity duration-300 ${isAnalyzing ? 'opacity-50 pointer-events-none' : ''}`}
+          />
         </div>
-        <div className="space-y-4">
-          <ImageUpload onUpload={handleImageUpload} />
-          <DetectionResults detections={detections} />
+        
+        <div className="absolute right-4 top-4 w-[400px] max-w-[90vw] z-[1000]">
+          <DetectionResults 
+            detections={detections} 
+            className={`transition-opacity duration-300 ${isAnalyzing ? 'opacity-50' : ''}`}
+          />
         </div>
       </div>
     </Layout>

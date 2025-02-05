@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { cn } from "@/lib/utils";
 
 interface MapProps {
   className?: string;
@@ -20,7 +21,13 @@ const Map = ({ className, detections = [] }: MapProps) => {
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    map.current = L.map(mapContainer.current).setView([0, 0], 2);
+    map.current = L.map(mapContainer.current, {
+      zoomControl: false, // We'll add it manually in a better position
+    }).setView([0, 0], 2);
+
+    L.control.zoom({
+      position: 'bottomright'
+    }).addTo(map.current);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -57,6 +64,12 @@ const Map = ({ className, detections = [] }: MapProps) => {
       markersRef.current.push(marker);
     });
 
+    // If there are detections, fit the map to show all markers
+    if (detections.length > 0) {
+      const group = L.featureGroup(markersRef.current);
+      map.current.fitBounds(group.getBounds(), { padding: [50, 50] });
+    }
+
     // Add coordinates overlay
     const updateCoordinates = (e: L.LeafletMouseEvent) => {
       const coordsOverlay = document.getElementById('coordinates-overlay');
@@ -75,17 +88,15 @@ const Map = ({ className, detections = [] }: MapProps) => {
   }, [detections]);
 
   return (
-    <div className="flex flex-col gap-4 w-full h-full">
-      <div className="relative flex-1 min-h-[400px]">
-        <div ref={mapContainer} className="absolute inset-0" />
-        <div className="absolute inset-0 pointer-events-none rounded-lg ring-1 ring-border/50" />
-        <div className="detection-overlay">
-          <div className="text-xs font-mono text-primary mb-1">ACTIVE SCAN</div>
-          <div className="text-sm">Detected Objects: {detections.length}</div>
-        </div>
-        <div id="coordinates-overlay" className="coordinates-overlay">
-          0.000000, 0.000000
-        </div>
+    <div className={cn("relative w-full h-full", className)}>
+      <div ref={mapContainer} className="absolute inset-0" />
+      <div className="absolute inset-0 pointer-events-none rounded-lg ring-1 ring-border/50" />
+      <div className="detection-overlay">
+        <div className="text-xs font-mono text-primary mb-1">ACTIVE SCAN</div>
+        <div className="text-sm">Detected Objects: {detections.length}</div>
+      </div>
+      <div id="coordinates-overlay" className="coordinates-overlay">
+        0.000000, 0.000000
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ interface LayoutProps {
 const Layout = ({ children, className }: LayoutProps) => {
   return (
     <div className={cn("min-h-screen bg-background", className)}>
-      <main className="flex flex-col h-screen p-4 gap-4">{children}</main>
+      <main className="h-screen">{children}</main>
     </div>
   );
 };

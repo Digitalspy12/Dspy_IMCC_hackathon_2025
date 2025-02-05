@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ImageUploadProps {
   onUpload: (file: File) => void;
@@ -28,20 +29,20 @@ const ImageUpload = ({ onUpload, className }: ImageUploadProps) => {
   return (
     <div
       {...getRootProps()}
-      className={`
+      className={cn(`
         detection-card cursor-pointer
         flex flex-col items-center justify-center
-        min-h-[200px] gap-4 transition-all duration-300
+        min-h-[120px] gap-4 transition-all duration-300
+        hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20
         ${isDragActive ? "border-primary ring-1 ring-primary" : ""}
-        ${className}
-      `}
+      `, className)}
     >
       <input {...getInputProps()} />
-      <Upload className="w-8 h-8 text-primary" />
+      <Upload className="w-6 h-6 text-primary" />
       <p className="text-center text-sm">
         {isDragActive
           ? "Drop the image here"
-          : "Drag & drop an image here, or click to select"}
+          : "Drop satellite image here, or click to select"}
       </p>
     </div>
   );
