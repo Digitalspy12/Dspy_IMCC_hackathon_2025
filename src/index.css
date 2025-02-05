@@ -63,3 +63,16 @@
 .loading-dot:nth-child(3) {
   animation-delay: 400ms;
 }
+
+/* Add Leaflet specific styles */
+.leaflet-container {
+  @apply w-full h-full rounded-lg;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply bg-card text-foreground rounded-lg border border-border/50;
+}
+
+.leaflet-popup-tip {
+  @apply bg-card;
+}
