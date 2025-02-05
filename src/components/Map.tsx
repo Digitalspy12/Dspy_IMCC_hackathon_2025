@@ -1,6 +1,9 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
 
 interface MapProps {
   className?: string;
@@ -16,29 +19,53 @@ const Map = ({ className, detections = [] }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const [token, setToken] = useState("");
+  const [isMapInitialized, setIsMapInitialized] = useState(false);
+
+  const initializeMap = () => {
+    if (!mapContainer.current || !token) return;
+
+    try {
+      mapboxgl.accessToken = token;
+      
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: "mapbox://styles/mapbox/satellite-v9",
+        center: [0, 0],
+        zoom: 2,
+        projection: "mercator",
+      });
+
+      map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+      
+      map.current.on('load', () => {
+        setIsMapInitialized(true);
+        toast({
+          title: "Map initialized successfully",
+          description: "The map is now ready to use",
+        });
+      });
+
+    } catch (error) {
+      console.error("Map initialization error:", error);
+      toast({
+        title: "Error initializing map",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
-    if (!mapContainer.current) return;
-
-    mapboxgl.accessToken = "YOUR_MAPBOX_TOKEN"; // Replace with your token
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/satellite-v9",
-      center: [0, 0],
-      zoom: 2,
-      projection: "mercator",
-    });
-
-    map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-
     return () => {
-      map.current?.remove();
+      if (map.current) {
+        map.current.remove();
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (!map.current) return;
+    if (!map.current || !isMapInitialized) return;
 
     // Clear existing markers
     markersRef.current.forEach((marker) => marker.remove());
@@ -65,12 +92,28 @@ const Map = ({ className, detections = [] }: MapProps) => {
 
       markersRef.current.push(marker);
     });
-  }, [detections]);
+  }, [detections, isMapInitialized]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapContainer} className="map-container" />
-      <div className="absolute inset-0 pointer-events-none rounded-lg ring-1 ring-border/50" />
+    <div className="flex flex-col gap-4 w-full h-full">
+      {!isMapInitialized && (
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Enter your Mapbox token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            className="flex-1"
+          />
+          <Button onClick={initializeMap} disabled={!token}>
+            Initialize Map
+          </Button>
+        </div>
+      )}
+      <div className="relative flex-1 min-h-[400px]">
+        <div ref={mapContainer} className="absolute inset-0" />
+        <div className="absolute inset-0 pointer-events-none rounded-lg ring-1 ring-border/50" />
+      </div>
     </div>
   );
 };
