@@ -38,12 +38,22 @@
 }
 
 .map-container {
-  @apply w-full h-full rounded-lg overflow-hidden;
+  @apply w-full h-full rounded-lg overflow-hidden relative;
   box-shadow: 0 0 20px rgba(0, 245, 212, 0.1);
 }
 
+.map-container::before {
+  content: '';
+  @apply absolute inset-0 border border-primary/30 pointer-events-none z-[1000] rounded-lg;
+}
+
+.map-container::after {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none z-[1000];
+}
+
 .detection-card {
-  @apply bg-card rounded-lg p-4 border border-border/50 hover:border-primary/50 transition-all duration-300;
+  @apply bg-card/80 rounded-lg p-4 border border-border/50 hover:border-primary/50 transition-all duration-300;
   backdrop-filter: blur(10px);
 }
 
@@ -67,6 +77,7 @@
 /* Add Leaflet specific styles */
 .leaflet-container {
   @apply w-full h-full rounded-lg;
+  background: #0a0a0a !important;
 }
 
 .leaflet-popup-content-wrapper {
@@ -75,4 +86,18 @@
 
 .leaflet-popup-tip {
   @apply bg-card;
+}
+
+.leaflet-tile {
+  filter: grayscale(100%) brightness(40%) sepia(20%) hue-rotate(140deg);
+}
+
+.detection-overlay {
+  @apply absolute top-4 left-4 z-[1000] bg-background/90 p-4 rounded-lg border border-primary/30;
+  backdrop-filter: blur(10px);
+}
+
+.coordinates-overlay {
+  @apply absolute bottom-4 right-4 z-[1000] bg-background/90 p-2 rounded-lg border border-primary/30 text-xs font-mono text-primary;
+  backdrop-filter: blur(10px);
 }
