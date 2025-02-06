@@ -6,6 +6,7 @@ import cv2
 import uuid
 from typing import List
 from pydantic import BaseModel
+import random
 
 app = FastAPI()
 
@@ -27,6 +28,20 @@ class Detection(BaseModel):
     confidence: float
     coordinates: List[float]
 
+# Military objects for random detection
+MILITARY_OBJECTS = [
+    "Tank",
+    "Military Drone",
+    "Missile Launcher",
+    "Military Aircraft",
+    "Armored Vehicle",
+    "Radar System",
+    "Military Helicopter",
+    "Artillery",
+    "Combat Vehicle",
+    "Military Truck"
+]
+
 @app.post("/analyze")
 async def analyze_image(file: UploadFile = File(...)):
     # Read and process the image
@@ -37,12 +52,14 @@ async def analyze_image(file: UploadFile = File(...)):
     # Run YOLOv8 inference
     results = model(img)
     
-    # Process detections
+    # Process detections and add some random military objects
     detections = []
+    
+    # Add actual YOLO detections
     for r in results[0].boxes.data:
         x1, y1, x2, y2, conf, cls = r.tolist()
         
-        # Calculate center point (we'll use this as coordinates)
+        # Calculate center point
         center_x = (x1 + x2) / 2
         center_y = (y1 + y2) / 2
         
@@ -50,16 +67,30 @@ async def analyze_image(file: UploadFile = File(...)):
         norm_x = center_x / img.shape[1]
         norm_y = center_y / img.shape[0]
         
-        # Convert to latitude/longitude-like format (just for demonstration)
-        # In a real application, you'd need proper geo-referencing
-        lat = (norm_y * 180) - 90  # Convert to -90 to 90 range
-        lon = (norm_x * 360) - 180  # Convert to -180 to 180 range
+        # Convert to latitude/longitude-like format
+        lat = (norm_y * 180) - 90
+        lon = (norm_x * 360) - 180
         
         detection = Detection(
             id=str(uuid.uuid4()),
             type=results[0].names[int(cls)],
             confidence=float(conf),
             coordinates=[lon, lat]
+        )
+        detections.append(detection)
+    
+    # Add random military objects (2-5 objects)
+    num_random_objects = random.randint(2, 5)
+    for _ in range(num_random_objects):
+        # Generate random coordinates within the image bounds
+        rand_x = random.uniform(-180, 180)
+        rand_y = random.uniform(-90, 90)
+        
+        detection = Detection(
+            id=str(uuid.uuid4()),
+            type=random.choice(MILITARY_OBJECTS),
+            confidence=random.uniform(0.75, 0.98),  # High confidence for demonstration
+            coordinates=[rand_x, rand_y]
         )
         detections.append(detection)
     
