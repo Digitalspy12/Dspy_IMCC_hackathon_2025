@@ -4,3 +4,5 @@ ultralytics==8.1.8
 opencv-python==4.9.0.80
 uvicorn==0.27.1
 numpy==1.26.3
+torch
+pillow
