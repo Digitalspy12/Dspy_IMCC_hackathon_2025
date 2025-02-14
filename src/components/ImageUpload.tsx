@@ -1,51 +1,48 @@
-import React, { useCallback } from "react";
-import { useDropzone } from "react-dropzone";
-import { Upload } from "lucide-react";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { useDropzone, type DropzoneOptions } from 'react-dropzone';
+import { Card } from './ui/card';
 
 interface ImageUploadProps {
   onUpload: (file: File) => void;
-  className?: string;
+  isLoading: boolean;
 }
 
-const ImageUpload = ({ onUpload, className }: ImageUploadProps) => {
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      if (acceptedFiles.length > 0) {
-        onUpload(acceptedFiles[0]);
-      }
-    },
-    [onUpload]
-  );
+export const ImageUpload = ({
+  onUpload,
+  isLoading,
+}: ImageUploadProps): React.ReactElement => {
+  const onDrop = React.useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      onUpload(acceptedFiles[0]);
+    }
+  }, [onUpload]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const dropzoneOptions: DropzoneOptions = {
     onDrop,
     accept: {
-      "image/*": [".jpeg", ".jpg", ".png", ".tiff"],
+      'image/*': ['.jpeg', '.jpg', '.png']
     },
-    multiple: false,
-  });
+    disabled: isLoading,
+    multiple: false
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone(dropzoneOptions);
 
   return (
-    <div
+    <Card
       {...getRootProps()}
-      className={cn(`
-        detection-card cursor-pointer
-        flex flex-col items-center justify-center
-        min-h-[120px] gap-4 transition-all duration-300
-        hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20
-        ${isDragActive ? "border-primary ring-1 ring-primary" : ""}
-      `, className)}
+      className={`p-8 text-center cursor-pointer border-dashed ${
+        isDragActive ? 'border-primary' : 'border-gray-300'
+      } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <input {...getInputProps()} />
-      <Upload className="w-6 h-6 text-primary" />
-      <p className="text-center text-sm">
-        {isDragActive
-          ? "Drop the image here"
-          : "Drop satellite image here, or click to select"}
-      </p>
-    </div>
+      {isLoading ? (
+        <p>Processing image...</p>
+      ) : isDragActive ? (
+        <p>Drop the image here...</p>
+      ) : (
+        <p>Drag & drop an image here, or click to select one</p>
+      )}
+    </Card>
   );
 };
-
-export default ImageUpload;

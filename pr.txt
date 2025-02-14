@@ -1,0 +1,81 @@
+Product Requirements Document
+1. Overview
+We want to build a web-based application that allows users to upload or drag-and-drop satellite (or other) images. The system will then use a YOLOv11m model (pre-trained or custom-trained) to detect specific military objects (e.g., tanks, troops, trucks, vehicles) in the image. The frontend will show:
+
+A map interface (like a tile layer or a stylized map) with pins or markers representing detection locations.
+A side panel displaying the list of detected objects and their confidence scores.
+The total count of detections.
+The ability to view an annotated image if desired.
+2. Goals & Objectives
+Goal: Provide a seamless user experience to upload images, run object detection, and visualize results on a map.
+Objective 1: Ensure the application can handle moderate image sizes efficiently.
+Objective 2: Provide clear, concise detection results (object type, confidence, bounding box).
+Objective 3: Display results both on a map (for geo-located images) and in a side panel for quick reference.
+3. Key Features
+Image Upload/Drop Zone
+
+Users can drag-and-drop images or click to select from their local file system.
+Basic file validation (e.g., only images of certain file types).
+Backend Object Detection
+
+A Python-based backend (e.g., Flask) that:
+Loads the YOLOv11m model.
+Processes the image.
+Returns bounding boxes, class labels, and confidence scores.
+Frontend Visualization
+
+A map interface (e.g., Leaflet) to display markers for each detected object (if geospatial data is provided or approximated).
+A side panel (or overlay) listing each detection:
+Object type (e.g., “Military Tank”)
+Confidence score (e.g., 98.50%)
+A detection counter (e.g., “Detected Objects: 88”).
+Optional: Display the annotated image (bounding boxes) in a separate view or pop-up.
+Results Storage & Sharing
+
+Temporary storage of the annotated images on the server.
+Option to download or view the annotated image.
+4. Functional Requirements
+FR-1: Upload Mechanism
+
+The user can upload an image file (JPG, PNG, etc.).
+The system should handle images up to a certain size (configurable).
+FR-2: Detection Processing
+
+The backend receives the uploaded image.
+The YOLOv11m model infers bounding boxes, class labels, and confidence scores.
+The server returns a JSON response with detection data and a URL to the annotated image.
+FR-3: Frontend Display
+
+The map or main UI shows markers/pins at relevant coordinates (if geospatial data is known).
+The side panel lists each detected object with its confidence score.
+A summary of total detections is shown.
+FR-4: Image Annotation Display
+
+Users can view the annotated image on a separate pop-up or panel.
+FR-5: Performance
+
+The system should process an image within a reasonable time (under ~5 seconds for typical images).
+5. Non-Functional Requirements
+NFR-1: Security
+
+Validate file uploads to prevent malicious content.
+Use HTTPS in production.
+
+NFR-2: Maintainability
+
+Code should be modular and well-documented.
+Clear separation of frontend and backend.
+6. Technical Stack
+Backend: Python (Flask or FastAPI), PyTorch, OpenCV, YOLOv11m model.
+Frontend: (potentially React, Next.js, or any framework).
+For map rendering, Leaflet or Mapbox or another map library.
+Deployment: Docker (optional), or any hosting service that can run Python web apps.
+7. User Flow
+User opens the web app → sees a map and a side panel.
+User uploads an image via drag-and-drop or file selector.
+Backend processes the image → returns detection data and annotated image path.
+Frontend:
+Shows detection results on the map (if location data is available).
+Displays detection info in the side panel (class, confidence).
+Shows a link or pop-up to view the annotated image.
+User can close, download results, or upload another image.

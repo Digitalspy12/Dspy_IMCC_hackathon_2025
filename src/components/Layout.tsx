@@ -1,16 +1,15 @@
-import React from "react";
-import { cn } from "@/lib/utils";
+import * as React from 'react';
 
-interface LayoutProps {
+export interface LayoutProps {
   children: React.ReactNode;
   className?: string;
 }
 
-const Layout = ({ children, className }: LayoutProps) => {
+export const Layout: React.FC<LayoutProps> = ({ children, className = "" }) => {
   return (
-    <div className={cn("min-h-screen bg-background", className)}>
-      <main className="h-screen">{children}</main>
-    </div>
+    <main className={`min-h-screen bg-background ${className}`}>
+      {children}
+    </main>
   );
 };
 

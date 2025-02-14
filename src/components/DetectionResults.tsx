@@ -1,54 +1,49 @@
-import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Detection {
-  id: string;
-  type: string;
-  confidence: number;
-  coordinates: [number, number];
-}
+import React from 'react';
+import type { Detection } from '@/services/detectionService';
+import { Card } from './ui/card';
 
 interface DetectionResultsProps {
   detections: Detection[];
-  className?: string;
+  annotatedImageUrl: string | null;
+  totalDetections: number;
 }
 
-const DetectionResults = ({ detections, className }: DetectionResultsProps) => {
+export const DetectionResults = ({
+  detections,
+  annotatedImageUrl,
+  totalDetections,
+}: DetectionResultsProps): React.ReactElement => {
   return (
-    <div className={`detection-card ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Detection Results</h3>
-        <div className="flex gap-1">
-          <div className="loading-dot" />
-          <div className="loading-dot" />
-          <div className="loading-dot" />
-        </div>
-      </div>
-      <ScrollArea className="h-[calc(100vh-300px)]">
-        <div className="space-y-4">
-          {detections.map((detection) => (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <h3 className="text-lg font-semibold mb-2">
+          Military Object Detection Results ({totalDetections})
+        </h3>
+        <div className="space-y-2">
+          {detections.map((detection, index) => (
             <div
-              key={detection.id}
-              className="p-4 bg-accent/50 rounded-md space-y-2 border border-primary/20"
+              key={index}
+              className="p-2 border rounded-md bg-background hover:bg-muted/50 transition-colors"
             >
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="bg-primary/10 text-primary">
-                  {detection.type}
-                </Badge>
-                <span className="text-sm text-primary">
-                  {(detection.confidence * 100).toFixed(2)}% confidence
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground font-mono">
-                [{detection.coordinates.join(", ")}]
-              </div>
+              <p className="font-medium">{detection.class_name}</p>
+              <p className="text-sm text-muted-foreground">
+                Confidence: {(detection.confidence * 100).toFixed(2)}%
+              </p>
+              {detection.location && (
+                <p className="text-sm text-muted-foreground">
+                  Location: {detection.location.lat.toFixed(6)}, {detection.location.lng.toFixed(6)}
+                </p>
+              )}
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </Card>
+
+      {detections.length === 0 && (
+        <Card className="p-4 text-center text-muted-foreground">
+          Upload an image to detect military objects using YOLOv11
+        </Card>
+      )}
     </div>
   );
 };
-
-export default DetectionResults;

@@ -1,105 +1,82 @@
-import React, { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { cn } from "@/lib/utils";
+import React, { useEffect, useState } from 'react';
+import type { Detection } from '@/services/detectionService';
+import { Card } from './ui/card';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix Leaflet default marker icons
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// Properly type the icon configuration
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
+
+// Import Leaflet CSS
+import 'leaflet/dist/leaflet.css';
 
 interface MapProps {
+  detections: Detection[];
   className?: string;
-  detections?: Array<{
-    id: string;
-    type: string;
-    confidence: number;
-    coordinates: [number, number];
-  }>;
 }
 
-const Map = ({ className, detections = [] }: MapProps) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+export const Map = ({ detections, className }: MapProps): React.ReactElement => {
+  const [isMounted, setIsMounted] = useState(false);
+  const detectionsWithLocation = detections.filter((d: Detection) => d.location);
 
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
-
-    map.current = L.map(mapContainer.current, {
-      zoomControl: false, // We'll add it manually in a better position
-    }).setView([0, 0], 2);
-
-    L.control.zoom({
-      position: 'bottomright'
-    }).addTo(map.current);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map.current);
-
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
+    setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!map.current) return;
+  if (!isMounted) {
+    return (
+      <Card className={`h-full flex items-center justify-center ${className}`}>
+        <p className="text-muted-foreground">Loading map...</p>
+      </Card>
+    );
+  }
 
-    // Clear existing markers
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
+  if (detectionsWithLocation.length === 0) {
+    return (
+      <Card className={`h-full flex items-center justify-center ${className}`}>
+        <p className="text-muted-foreground">No location data available</p>
+      </Card>
+    );
+  }
 
-    // Add new markers
-    detections.forEach((detection) => {
-      const marker = L.marker([detection.coordinates[1], detection.coordinates[0]])
-        .bindPopup(`
-          <div class="p-2">
-            <div class="font-bold text-primary">${detection.type}</div>
-            <div class="text-sm text-muted-foreground">Confidence: ${(detection.confidence * 100).toFixed(2)}%</div>
-            <div class="text-xs font-mono mt-2 text-primary/70">[${detection.coordinates.join(", ")}]</div>
-          </div>
-        `)
-        .addTo(map.current!);
-
-      markersRef.current.push(marker);
-    });
-
-    // If there are detections, fit the map to show all markers
-    if (detections.length > 0) {
-      const group = L.featureGroup(markersRef.current);
-      map.current.fitBounds(group.getBounds(), { padding: [50, 50] });
-    }
-
-    // Add coordinates overlay
-    const updateCoordinates = (e: L.LeafletMouseEvent) => {
-      const coordsOverlay = document.getElementById('coordinates-overlay');
-      if (coordsOverlay) {
-        coordsOverlay.textContent = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
-      }
-    };
-
-    map.current.on('mousemove', updateCoordinates);
-
-    return () => {
-      if (map.current) {
-        map.current.off('mousemove', updateCoordinates);
-      }
-    };
-  }, [detections]);
+  const center = detectionsWithLocation[0]?.location || { lat: 51.505, lng: -0.09 };
 
   return (
-    <div className={cn("relative w-full h-full", className)}>
-      <div ref={mapContainer} className="absolute inset-0" />
-      <div className="absolute inset-0 pointer-events-none rounded-lg ring-1 ring-border/50" />
-      <div className="detection-overlay">
-        <div className="text-xs font-mono text-primary mb-1">ACTIVE SCAN</div>
-        <div className="text-sm">Detected Objects: {detections.length}</div>
-      </div>
-      <div id="coordinates-overlay" className="coordinates-overlay">
-        0.000000, 0.000000
-      </div>
-    </div>
+    <Card className={`h-full p-2 ${className}`}>
+      <MapContainer
+        center={[center.lat, center.lng]}
+        zoom={13}
+        style={{ height: "100%", width: "100%" }}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        {detectionsWithLocation.map((detection: Detection, index: number) => (
+          <Marker
+            key={index}
+            position={[detection.location!.lat, detection.location!.lng]}
+          >
+            <Popup>
+              <div>
+                <strong>{detection.class}</strong>
+                <br />
+                Confidence: {(detection.confidence * 100).toFixed(2)}%
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </Card>
   );
 };
-
-export default Map;

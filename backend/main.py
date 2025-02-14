@@ -7,6 +7,9 @@ import uuid
 from typing import List
 from pydantic import BaseModel
 import random
+from pathlib import Path
+from PIL import Image
+import io
 
 app = FastAPI()
 
@@ -19,8 +22,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load YOLOv8 model
-model = YOLO('yolov8n.pt')  # Using the nano model for faster inference
+# Constants
+UPLOAD_FOLDER = Path('uploads')
+UPLOAD_FOLDER.mkdir(exist_ok=True)
+
+# Initialize custom YOLOv11 model
+try:
+    model = YOLO('best.pt')  # Using your custom trained model
+    print("Successfully loaded custom YOLOv11 model")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    raise
 
 class Detection(BaseModel):
     id: str
@@ -28,73 +40,63 @@ class Detection(BaseModel):
     confidence: float
     coordinates: List[float]
 
-# Military objects for random detection
-MILITARY_OBJECTS = [
-    "Tank",
-    "Military Drone",
-    "Missile Launcher",
-    "Military Aircraft",
-    "Armored Vehicle",
-    "Radar System",
-    "Military Helicopter",
-    "Artillery",
-    "Combat Vehicle",
-    "Military Truck"
-]
+# Custom class mapping - matches your model's classes
+MILITARY_CLASS_MAPPING = {
+    0: "Military Vehicle",
+    1: "Military Truck",
+    2: "Tank",
+    3: "Artillery",
+    4: "Military Aircraft",
+    5: "Military Building",
+    6: "Military Personnel",
+    7: "Military Equipment",
+    8: "Storage Container",
+    9: "Supply Depot"
+}
 
 @app.post("/analyze")
 async def analyze_image(file: UploadFile = File(...)):
     # Read and process the image
     contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    image = Image.open(io.BytesIO(contents))
     
-    # Run YOLOv8 inference
-    results = model(img)
-    
-    # Process detections and add some random military objects
-    detections = []
-    
-    # Add actual YOLO detections
-    for r in results[0].boxes.data:
-        x1, y1, x2, y2, conf, cls = r.tolist()
+    try:
+        # Run custom model inference
+        results = model(image, conf=0.35)  # Adjust confidence threshold as needed
+        result = results[0]
         
-        # Calculate center point
-        center_x = (x1 + x2) / 2
-        center_y = (y1 + y2) / 2
-        
-        # Normalize coordinates to 0-1 range
-        norm_x = center_x / img.shape[1]
-        norm_y = center_y / img.shape[0]
-        
-        # Convert to latitude/longitude-like format
-        lat = (norm_y * 180) - 90
-        lon = (norm_x * 360) - 180
-        
-        detection = Detection(
-            id=str(uuid.uuid4()),
-            type=results[0].names[int(cls)],
-            confidence=float(conf),
-            coordinates=[lon, lat]
-        )
-        detections.append(detection)
-    
-    # Add random military objects (2-5 objects)
-    num_random_objects = random.randint(2, 5)
-    for _ in range(num_random_objects):
-        # Generate random coordinates within the image bounds
-        rand_x = random.uniform(-180, 180)
-        rand_y = random.uniform(-90, 90)
-        
-        detection = Detection(
-            id=str(uuid.uuid4()),
-            type=random.choice(MILITARY_OBJECTS),
-            confidence=random.uniform(0.75, 0.98),  # High confidence for demonstration
-            coordinates=[rand_x, rand_y]
-        )
-        detections.append(detection)
-    
-    return {"detections": detections}
+        detections = []
+        if result.boxes is not None:
+            for box in result.boxes:
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                confidence = float(box.conf[0])
+                class_id = int(box.cls[0])
+                
+                if class_id in MILITARY_CLASS_MAPPING:
+                    # Calculate center point
+                    center_x = (x1 + x2) / 2
+                    center_y = (y1 + y2) / 2
+                    
+                    # Normalize coordinates to 0-1 range
+                    norm_x = center_x / image.width
+                    norm_y = center_y / image.height
+                    
+                    # Convert to latitude/longitude-like format
+                    lat = (norm_y * 180) - 90
+                    lon = (norm_x * 360) - 180
+                    
+                    detection = Detection(
+                        id=str(uuid.uuid4()),
+                        type=MILITARY_CLASS_MAPPING[class_id],
+                        confidence=confidence,
+                        coordinates=[lon, lat]
+                    )
+                    detections.append(detection)
+
+        return {"detections": detections}
+
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
