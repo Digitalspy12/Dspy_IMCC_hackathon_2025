@@ -9,6 +9,8 @@ A web application that uses YOLOv11 to detect military objects in images and vis
 - Interactive map visualization (when geolocation data is available)
 - Detection results panel with confidence scores
 - Annotated image display
+## demo 
+
 
 ## Setup
 
