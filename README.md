@@ -11,6 +11,7 @@ A web application that uses YOLOv11 to detect military objects in images and vis
 - Annotated image display
 ## demo 
 
+![WhatsApp Image 2025-02-16 at 8 13 24 AM](https://github.com/user-attachments/assets/9564e255-afb5-4c1b-87d3-5bbc82e29159)
 
 ## Setup
 
