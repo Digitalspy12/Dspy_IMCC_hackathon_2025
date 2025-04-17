@@ -11,6 +11,8 @@ import uuid
 from pathlib import Path
 import logging
 from ultralytics import YOLO
+import piexif
+from fractions import Fraction
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -31,6 +33,59 @@ UPLOAD_FOLDER = Path('static/annotated')
 DATA_FOLDER = Path('data')
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+
+def extract_gps_from_image(image_path):
+    """
+    Extract GPS coordinates from image EXIF data.
+    
+    Args:
+        image_path: Path to the image file
+        
+    Returns:
+        tuple: (latitude, longitude) if GPS data is found, (None, None) otherwise
+    """
+    try:
+        # Load EXIF data
+        exif_dict = piexif.load(str(image_path))
+        
+        # Check if GPS info exists
+        if "GPS" not in exif_dict or not exif_dict["GPS"]:
+            logger.info("No GPS data found in image EXIF")
+            return None, None
+        
+        # Extract GPS data
+        gps_info = exif_dict["GPS"]
+        
+        # Check if latitude and longitude references exist
+        if not all(key in gps_info for key in [1, 2, 3, 4]):
+            logger.info("Incomplete GPS data in EXIF")
+            return None, None
+        
+        # Get latitude
+        lat_ref = gps_info[1].decode('utf-8')
+        lat_deg = _convert_to_degrees(gps_info[2])
+        latitude = lat_deg if lat_ref == "N" else -lat_deg
+        
+        # Get longitude 
+        lon_ref = gps_info[3].decode('utf-8')
+        lon_deg = _convert_to_degrees(gps_info[4])
+        longitude = lon_deg if lon_ref == "E" else -lon_deg
+        
+        logger.info(f"Extracted GPS coordinates: {latitude}, {longitude}")
+        return latitude, longitude
+    
+    except Exception as e:
+        logger.error(f"Error extracting GPS data: {e}")
+        return None, None
+
+def _convert_to_degrees(value):
+    """
+    Convert GPS coordinates from (degrees, minutes, seconds) format to decimal degrees
+    """
+    degrees = value[0][0] / value[0][1]
+    minutes = value[1][0] / value[1][1] / 60
+    seconds = value[2][0] / value[2][1] / 3600
+    return degrees + minutes + seconds
 
 class YOLOv11:
     def __init__(self, model_path):
@@ -176,11 +231,22 @@ def detect_objects():
         logger.error('Empty filename received')
         return jsonify({'error': 'No selected file'}), 400
 
+    # Get manual coordinates if provided
+    manual_lat = request.form.get('manual_lat')
+    manual_lng = request.form.get('manual_lng')
+    
     try:
         # Save uploaded file temporarily
         temp_path = UPLOAD_FOLDER / f"temp_{uuid.uuid4()}.jpg"
         file.save(temp_path)
         logger.info(f'Saved temporary file to {temp_path}')
+        
+        # Extract GPS from EXIF
+        exif_lat, exif_lng = extract_gps_from_image(temp_path)
+        
+        # Determine final coordinates (prioritize manual input)
+        latitude = float(manual_lat) if manual_lat else exif_lat
+        longitude = float(manual_lng) if manual_lng else exif_lng
         
         # Open and process image
         image = Image.open(temp_path).convert('RGB')  # Ensure RGB format
@@ -200,6 +266,19 @@ def detect_objects():
             bbox = detection['bbox']
             label = f"{detection['class_name']} {detection['confidence']:.2f}"
             
+            # Add location to each detection if coordinates are available
+            if latitude is not None and longitude is not None:
+                # Calculate slight offset for each detection to spread them on map
+                center_x = (bbox[0] + bbox[2]) / 2
+                center_y = (bbox[1] + bbox[3]) / 2
+                detection_lat = latitude + (center_y / 10000)  # Small offset
+                detection_lng = longitude + (center_x / 10000)  # Small offset
+                
+                detection['location'] = {
+                    'lat': detection_lat,
+                    'lng': detection_lng
+                }
+            
             # Draw bounding box with thicker line
             draw.rectangle(bbox, outline='red', width=3)
             # Draw label with background
@@ -216,7 +295,11 @@ def detect_objects():
         response_data = {
             'detections': detections,
             'annotated_image_url': f'/static/annotated/{filename}',
-            'total_detections': len(detections)
+            'total_detections': len(detections),
+            'image_location': {
+                'lat': latitude,
+                'lng': longitude
+            } if latitude is not None and longitude is not None else None
         }
         
         logger.info(f"Successfully processed image with {len(detections)} detections")

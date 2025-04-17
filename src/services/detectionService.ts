@@ -1,23 +1,6 @@
 import { toast } from "@/components/ui/use-toast";
 import { API_URL } from '@/lib/config';
-
-export interface Detection {
-  bbox: number[];
-  confidence: number;
-  class: number;
-  class_name: string;
-  location?: {
-    lat: number;
-    lng: number;
-  };
-}
-
-export interface DetectionResult {
-  detections: Detection[];
-  annotated_image_url: string;
-  total_detections: number;
-  filename?: string;
-}
+import { Detection, DetectionResult } from '@/types';
 
 export interface DemoResponse {
   results: DetectionResult[];
@@ -37,10 +20,7 @@ export const DETECTED_OBJECTS = [
   "Supply Depot"
 ];
 
-export const detectObjects = async (image: File): Promise<DetectionResult> => {
-  const formData = new FormData();
-  formData.append('image', image);
-
+export const detectObjects = async (formData: FormData): Promise<DetectionResult> => {
   try {
     console.log('Sending request to:', `${API_URL}/detect`);
     

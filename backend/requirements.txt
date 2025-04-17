@@ -9,3 +9,4 @@ pillow>=10.0.0
 python-dotenv>=1.0.0
 pathlib>=1.0.1
 ultralytics>=8.0.196
+piexif>=1.1.3

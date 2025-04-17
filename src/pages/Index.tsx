@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { Detection, DetectionResult } from '@/services/detectionService';
+import type { Detection, DetectionResult } from '@/types';
 import { Layout } from "@/components/Layout";
 import { Map } from "@/components/Map";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -17,8 +17,9 @@ const Index = (): JSX.Element => {
   const [totalDetections, setTotalDetections] = React.useState(0);
   const [demoResults, setDemoResults] = React.useState<DetectionResult[]>([]);
   const [isDemoMode, setIsDemoMode] = React.useState(false);
+  const [imageLocation, setImageLocation] = React.useState<{lat: number, lng: number} | null>(null);
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (file: File, coords?: { lat: number; lng: number }) => {
     setIsAnalyzing(true);
     setIsDemoMode(false);
     setDemoResults([]);
@@ -33,10 +34,21 @@ const Index = (): JSX.Element => {
         description: "Analyzing with YOLOv11. This may take a moment.",
       });
 
-      const response = await detectObjects(file);
+      // Create FormData with file
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      // Add manual coordinates if provided
+      if (coords) {
+        formData.append('manual_lat', coords.lat.toString());
+        formData.append('manual_lng', coords.lng.toString());
+      }
+
+      const response = await detectObjects(formData);
       setDetections(response.detections);
       setAnnotatedImageUrl(response.annotated_image_url);
       setTotalDetections(response.total_detections);
+      setImageLocation(response.image_location || null);
       
       toast({
         title: "Analysis complete",
@@ -97,6 +109,7 @@ const Index = (): JSX.Element => {
     setDetections(result.detections);
     setAnnotatedImageUrl(result.annotated_image_url);
     setTotalDetections(result.total_detections);
+    setImageLocation(result.image_location || null);
   };
 
   return (
@@ -117,7 +130,7 @@ const Index = (): JSX.Element => {
             </div>
           </div>
         ) : (
-          <Map detections={detections} className="w-full h-full" />
+          <Map detections={detections} className="w-full h-full" center={imageLocation || undefined} />
         )}
         
         <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[600px] max-w-[90vw] z-[1000] space-y-4">

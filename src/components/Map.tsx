@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import type { Detection } from '@/services/detectionService';
+import type { Detection } from '@/types';
 import { Card } from './ui/card';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 // Fix Leaflet default marker icons
@@ -20,12 +20,24 @@ L.Icon.Default.mergeOptions({
 // Import Leaflet CSS
 import 'leaflet/dist/leaflet.css';
 
+interface MapCenterProps {
+  center: { lat: number; lng: number };
+}
+
+// Helper component to programmatically change map center
+const ChangeView = ({ center }: MapCenterProps) => {
+  const map = useMap();
+  map.setView([center.lat, center.lng], 13);
+  return null;
+};
+
 interface MapProps {
   detections: Detection[];
   className?: string;
+  center?: { lat: number; lng: number };
 }
 
-export const Map = ({ detections, className }: MapProps): React.ReactElement => {
+export const Map = ({ detections, className, center: propCenter }: MapProps): React.ReactElement => {
   const [isMounted, setIsMounted] = useState(false);
   const detectionsWithLocation = detections.filter((d: Detection) => d.location);
 
@@ -49,7 +61,10 @@ export const Map = ({ detections, className }: MapProps): React.ReactElement => 
     );
   }
 
-  const center = detectionsWithLocation[0]?.location || { lat: 51.505, lng: -0.09 };
+  // Use provided center, or first detection location, or default
+  const center = propCenter || 
+    (detectionsWithLocation.length > 0 && detectionsWithLocation[0].location) || 
+    { lat: 51.505, lng: -0.09 };
 
   return (
     <Card className={`h-full p-2 ${className}`}>
@@ -58,6 +73,8 @@ export const Map = ({ detections, className }: MapProps): React.ReactElement => 
         zoom={13}
         style={{ height: "100%", width: "100%" }}
       >
+        {/* Update view if center changes */}
+        <ChangeView center={center} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -69,9 +86,11 @@ export const Map = ({ detections, className }: MapProps): React.ReactElement => 
           >
             <Popup>
               <div>
-                <strong>{detection.class}</strong>
+                <strong>{detection.class_name}</strong>
                 <br />
                 Confidence: {(detection.confidence * 100).toFixed(2)}%
+                <br />
+                Location: {detection.location!.lat.toFixed(6)}, {detection.location!.lng.toFixed(6)}
               </div>
             </Popup>
           </Marker>
